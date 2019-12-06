@@ -185,21 +185,21 @@ void *mm_malloc(size_t size)
 {
     int newsize = ALIGN(BLK_HDR_SIZE + size + BLK_FTR_SIZE);
     blockHdr *bp = find_fit(newsize);
-    blockFtr *bf = (blockFtr *)((char *)bp + newsize - BLK_FTR_SIZE); // set footer size and allocate
+    blockFtr *bf = NULL;
     if (bp == NULL)
     {
         bp = mem_sbrk(newsize);
         if ((long)bp == -1)
         {
-
             // no space
             return NULL;
         }
         else
         {
             bp->size = newsize | 1; // set size and allocated bit
+            bf = (blockFtr *)((char *)bp + newsize - BLK_FTR_SIZE); // set footer size and allocate
+            printf("\ntest\n");
             bf->size = newsize | 1; // size is ssaving wrong... large negative number -- now segfaulting here
-    printf("\ntest\n");
         }
     }
     else
