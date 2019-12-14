@@ -88,6 +88,7 @@ typedef struct {
 /********************
  * Global variables
  *******************/
+int blackhole;
 int verbose = 0;        /* global flag for verbose output */
 static int errors = 0;  /* number of errs found when running student malloc */
 char msg[MAXLINE];      /* for whenever we need to compose an error message */
@@ -322,18 +323,21 @@ int main(int argc, char **argv)
     util = 0;
     numcorrect = 0;
     for (i=0; i < num_tracefiles; i++) {
-	secs += mm_stats[i].secs;
-	ops += mm_stats[i].ops;
-	util += mm_stats[i].util;
 	if (mm_stats[i].valid)
-	    numcorrect++;
+	  {  numcorrect++;
+	    secs += mm_stats[i].secs;
+	    ops += mm_stats[i].ops;
+	    util += mm_stats[i].util;
+	  }
     }
-    avg_mm_util = util/num_tracefiles;
+    avg_mm_util = util/ (double) numcorrect;
+    printf("*Average Utilization %8.0f\n",avg_mm_util*100);
+    printf("*numcorrect %d\n",numcorrect);
 
     /* 
      * Compute and print the performance index 
      */
-    if (errors == 0) {
+    //  if (errors == 0) {
 	avg_mm_throughput = ops/secs;
 
 	p1 = UTIL_WEIGHT * avg_mm_util;
@@ -344,22 +348,25 @@ int main(int argc, char **argv)
 	    p2 = ((double) (1.0 - UTIL_WEIGHT)) * 
 		(avg_mm_throughput/AVG_LIBC_THRUPUT);
 	}
+	p1*=100;
+	p2*=100;
+	double partial= (double) numcorrect/ (double) num_tracefiles;
+	printf("partial=%0f\n",partial);
+	perfindex = (p1 + p2) ;
+	printf("Perf index = %8.0f (util) + %8.0f (thru) = %8.0f/100\n",
+	       p1*partial, 
+	       p2*partial, 
+	       perfindex*partial);
 	
-	perfindex = (p1 + p2)*100.0;
-	printf("Perf index = %.0f (util) + %.0f (thru) = %.0f/100\n",
-	       p1*100, 
-	       p2*100, 
-	       perfindex);
-	
-    }
-    else { /* There were errors */
+	/*    }
+ else {
 	perfindex = 0.0;
 	printf("Terminated with %d errors\n", errors);
     }
-
+*/ 
     if (autograder) {
 	printf("correct:%d\n", numcorrect);
-	printf("perfidx:%.0f\n", perfindex);
+	printf("perfidx:%.0f\n", perfindex*partial);
     }
 
     exit(0);
@@ -495,10 +502,10 @@ static trace_t *read_trace(char *tracedir, char *filename)
 	sprintf(msg, "Could not open %s in read_trace", path);
 	unix_error(msg);
     }
-    fscanf(tracefile, "%d", &(trace->sugg_heapsize)); /* not used */
-    fscanf(tracefile, "%d", &(trace->num_ids));     
-    fscanf(tracefile, "%d", &(trace->num_ops));     
-    fscanf(tracefile, "%d", &(trace->weight));        /* not used */
+    blackhole=fscanf(tracefile, "%d", &(trace->sugg_heapsize)); /* not used */
+    blackhole=fscanf(tracefile, "%d", &(trace->num_ids));     
+    blackhole=fscanf(tracefile, "%d", &(trace->num_ops));     
+    blackhole=fscanf(tracefile, "%d", &(trace->weight));        /* not used */
     
     /* We'll store each request line in the trace in this array */
     if ((trace->ops = 
@@ -521,21 +528,21 @@ static trace_t *read_trace(char *tracedir, char *filename)
     while (fscanf(tracefile, "%s", type) != EOF) {
 	switch(type[0]) {
 	case 'a':
-	    fscanf(tracefile, "%u %u", &index, &size);
+	    blackhole=fscanf(tracefile, "%u %u", &index, &size);
 	    trace->ops[op_index].type = ALLOC;
 	    trace->ops[op_index].index = index;
 	    trace->ops[op_index].size = size;
 	    max_index = (index > max_index) ? index : max_index;
 	    break;
 	case 'r':
-	    fscanf(tracefile, "%u %u", &index, &size);
+	    blackhole=fscanf(tracefile, "%u %u", &index, &size);
 	    trace->ops[op_index].type = REALLOC;
 	    trace->ops[op_index].index = index;
 	    trace->ops[op_index].size = size;
 	    max_index = (index > max_index) ? index : max_index;
 	    break;
 	case 'f':
-	    fscanf(tracefile, "%ud", &index);
+	    blackhole=fscanf(tracefile, "%ud", &index);
 	    trace->ops[op_index].type = FREE;
 	    trace->ops[op_index].index = index;
 	    break;
